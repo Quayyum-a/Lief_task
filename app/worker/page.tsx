@@ -10,7 +10,7 @@ import ClockInterface from '@/components/worker/ClockInterface'
 const { Header, Content } = Layout
 
 export default function WorkerDashboard() {
-  const { user } = useUser()
+  const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
