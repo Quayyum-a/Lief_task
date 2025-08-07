@@ -48,6 +48,7 @@ export default function RootLayout({
           >
             <ShiftProvider>
               {children}
+              <PWAInstaller />
             </ShiftProvider>
           </ConfigProvider>
         </UserProvider>
