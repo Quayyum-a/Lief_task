@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
-import { useUser } from '@auth0/nextjs-auth0/client'
+import { useUser } from '@auth0/nextjs-auth0'
 import { message } from 'antd'
 import type { 
   ShiftContextType, 
