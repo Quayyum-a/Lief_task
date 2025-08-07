@@ -17,7 +17,7 @@ import {
 import { Bar, Line, Doughnut } from 'react-chartjs-2'
 import { useShift } from '@/context/ShiftContext'
 
-const { Title } = Typography
+// const { Title } = Typography
 
 // Register Chart.js components
 ChartJS.register(
