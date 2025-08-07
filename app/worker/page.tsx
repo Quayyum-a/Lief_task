@@ -2,7 +2,7 @@
 
 import { Layout, Button, Space } from 'antd'
 import { LogoutOutlined, MenuOutlined } from '@ant-design/icons'
-import { useUser } from '@/context/AuthContext'
+import { useSession, signOut } from 'next-auth/react'
 import { useState } from 'react'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import ClockInterface from '@/components/worker/ClockInterface'
