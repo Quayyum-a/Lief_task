@@ -2,7 +2,7 @@
 
 import { Card, Button, Space, Typography, Divider } from 'antd'
 import { GoogleOutlined, UserOutlined, LockOutlined } from '@ant-design/icons'
-import { useUser } from '@auth0/nextjs-auth0'
+import { useUser } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
