@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server'
 // Simplified auth endpoint for MVP demo
 export async function GET(
   request: NextRequest,
-  { params }: { params: { auth0: string[] } }
+  context: { params: Promise<{ auth0: string[] }> }
 ) {
+  const params = await context.params
   const action = params.auth0[0]
 
   if (action === 'login') {
