@@ -1,36 +1,138 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HealthShift - Healthcare Worker Management System
 
-## Getting Started
+A comprehensive web application for healthcare workers to clock in and out of their shifts, with location validation and manager oversight.
 
-First, run the development server:
+## 🚀 Features
 
+### For Healthcare Workers:
+- **Location-based Clock In/Out** - Only clock in within designated perimeters
+- **Real-time Location Tracking** - Automatic perimeter detection
+- **Mobile-First Design** - Touch-friendly interface optimized for mobile
+- **Shift Management** - Track current shift duration and notes
+- **PWA Support** - Install as a home screen app for quick access
+
+### For Managers:
+- **Staff Overview Dashboard** - Real-time staff status and locations
+- **Analytics & Reports** - Charts showing attendance and performance
+- **Location Perimeter Management** - Set geographic boundaries (2km radius)
+- **Comprehensive Tracking** - Clock-in/out history with locations and notes
+
+## 🛠 Tech Stack
+
+- **Next.js 15** with TypeScript and App Router
+- **Ant Design** for UI components
+- **Tailwind CSS** for responsive styling
+- **Chart.js** for data visualization
+- **React Context** for state management
+- **PWA** with service worker support
+- **Geolocation API** for location services
+
+## 🚀 Quick Start
+
+### 1. Install Dependencies
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Environment Setup
+Create a `.env.local` file (Auth0 setup for production):
+```env
+AUTH0_SECRET='your-secret-key'
+AUTH0_BASE_URL='http://localhost:3000'
+AUTH0_ISSUER_BASE_URL='https://your-domain.auth0.com'
+AUTH0_CLIENT_ID='your-client-id'
+AUTH0_CLIENT_SECRET='your-client-secret'
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Run Development Server
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-## Learn More
+### 4. Demo Login
+- **Worker Access**: Click "Demo Worker Login" 
+- **Manager Access**: Click "Demo Manager Login"
 
-To learn more about Next.js, take a look at the following resources:
+## 📱 Mobile Features
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Responsive Design** - Works on all screen sizes
+- **Bottom Navigation** - Easy thumb navigation on mobile
+- **Touch Optimized** - Large touch targets and gestures
+- **PWA Support** - Install on home screen
+- **Offline Capability** - Basic functionality without internet
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🎯 Key Features Implemented
 
-## Deploy on Vercel
+### ✅ Location Management
+- 2km radius perimeter validation
+- Real-time GPS tracking
+- Automatic in/out detection
+- Location history tracking
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### ✅ Authentication & Security
+- Demo authentication system
+- Role-based access (worker/manager)
+- Protected routes and data
+- Secure session management
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### ✅ Analytics Dashboard
+- Real-time staff status
+- Weekly hours tracking
+- Attendance trends
+- Performance metrics
+
+### ✅ Mobile Experience
+- Mobile-first responsive design
+- Bottom tab navigation
+- Touch-friendly interface
+- PWA installation support
+
+## 🔧 Production Setup
+
+For production deployment:
+
+1. Set up Auth0 application
+2. Configure environment variables
+3. Deploy to Vercel/Netlify
+4. Enable HTTPS for geolocation
+5. Configure domain settings
+
+## 📊 Dashboard Features
+
+### Manager Dashboard:
+- Staff overview table
+- Real-time analytics charts
+- Location perimeter management
+- Attendance tracking
+
+### Worker Interface:
+- Clock in/out buttons
+- Current shift timer
+- Location status indicator
+- Optional shift notes
+
+## 🌟 Future Enhancements
+
+- Real Auth0 integration
+- Database integration
+- Push notifications
+- Shift scheduling
+- Time off requests
+- Payroll integration
+
+## 🔒 Security Notes
+
+- Location data is processed client-side
+- Demo authentication for MVP
+- Role-based access control
+- Secure API endpoints
+
+## 📞 Support
+
+For questions or support, contact: career@lief.care
+
+---
+
+Built with ❤️ for healthcare workers
