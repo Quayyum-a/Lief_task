@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { ConfigProvider } from 'antd'
 import { UserProvider } from '@auth0/nextjs-auth0/client'
 import { ShiftProvider } from '@/context/ShiftContext'
+import PWAInstaller from '@/components/shared/PWAInstaller'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
