@@ -175,7 +175,7 @@ export default function PerimeterManagement() {
         })
         message.success('Current location set as center point')
       },
-      (error) => {
+      () => {
         message.error('Failed to get current location')
       }
     )
