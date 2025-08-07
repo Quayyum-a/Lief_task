@@ -1,18 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, Button, Input, Form, Space, Typography, Divider, message } from 'antd'
-import { GoogleOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
-import { signIn, getSession } from 'next-auth/react'
+import { Card, Button, Input, Form, Space, Typography, Divider, message, Alert } from 'antd'
+import { GoogleOutlined, MailOutlined, UserOutlined, WarningOutlined } from '@ant-design/icons'
+import { signIn, getProviders } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 const { Title, Text } = Typography
+
+interface Provider {
+  id: string
+  name: string
+  type: string
+}
 
 export default function SignInPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
+  const [providers, setProviders] = useState<Record<string, Provider>>({})
   const [form] = Form.useForm()
 
   const error = searchParams.get('error')
@@ -22,6 +29,13 @@ export default function SignInPage() {
     if (error) {
       message.error('Sign in failed. Please try again.')
     }
+    
+    // Load available providers
+    getProviders().then((providers) => {
+      if (providers) {
+        setProviders(providers)
+      }
+    })
   }, [error])
 
   const handleGoogleSignIn = async () => {
@@ -50,11 +64,14 @@ export default function SignInPage() {
         message.error('Failed to send email. Please try again.')
       }
     } catch (error) {
-      message.error('Failed to send sign-in email')
+      message.error('Email authentication is not configured')
     } finally {
       setEmailLoading(false)
     }
   }
+
+  const hasGoogleProvider = providers.google
+  const hasEmailProvider = providers.email
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -71,70 +88,128 @@ export default function SignInPage() {
           </Text>
         </div>
 
+        {!hasGoogleProvider && !hasEmailProvider && (
+          <Alert
+            message="Authentication Setup Required"
+            description="Please configure Google OAuth or Email authentication in your environment variables to enable sign-in."
+            type="warning"
+            icon={<WarningOutlined />}
+            className="mb-6"
+            showIcon
+          />
+        )}
+
         <Space direction="vertical" size="large" className="w-full">
           {/* Google Sign In */}
-          <div>
-            <Button
-              type="primary"
-              icon={<GoogleOutlined />}
-              size="large"
-              block
-              loading={loading}
-              onClick={handleGoogleSignIn}
-              className="h-12 flex items-center justify-center"
-            >
-              Continue with Google
-            </Button>
-          </div>
+          {hasGoogleProvider && (
+            <div>
+              <Button
+                type="primary"
+                icon={<GoogleOutlined />}
+                size="large"
+                block
+                loading={loading}
+                onClick={handleGoogleSignIn}
+                className="h-12 flex items-center justify-center"
+              >
+                Continue with Google
+              </Button>
+            </div>
+          )}
 
-          <Divider>or</Divider>
+          {hasGoogleProvider && hasEmailProvider && <Divider>or</Divider>}
 
           {/* Email Sign In */}
-          <div>
-            <Form
-              form={form}
-              onFinish={handleEmailSignIn}
-              layout="vertical"
-            >
-              <Form.Item
-                name="email"
-                rules={[
-                  { required: true, message: 'Please enter your email' },
-                  { type: 'email', message: 'Please enter a valid email' }
-                ]}
+          {hasEmailProvider && (
+            <div>
+              <Form
+                form={form}
+                onFinish={handleEmailSignIn}
+                layout="vertical"
               >
-                <Input
-                  prefix={<MailOutlined />}
-                  placeholder="Enter your email address"
-                  size="large"
-                />
-              </Form.Item>
-              
-              <Form.Item className="mb-0">
-                <Button
-                  type="default"
-                  htmlType="submit"
-                  size="large"
-                  block
-                  loading={emailLoading}
-                  className="h-12"
+                <Form.Item
+                  name="email"
+                  rules={[
+                    { required: true, message: 'Please enter your email' },
+                    { type: 'email', message: 'Please enter a valid email' }
+                  ]}
                 >
-                  Send Magic Link
-                </Button>
-              </Form.Item>
-            </Form>
-          </div>
+                  <Input
+                    prefix={<MailOutlined />}
+                    placeholder="Enter your email address"
+                    size="large"
+                  />
+                </Form.Item>
+                
+                <Form.Item className="mb-0">
+                  <Button
+                    type="default"
+                    htmlType="submit"
+                    size="large"
+                    block
+                    loading={emailLoading}
+                    className="h-12"
+                  >
+                    Send Magic Link
+                  </Button>
+                </Form.Item>
+              </Form>
+            </div>
+          )}
+
+          {/* Demo Access */}
+          {!hasGoogleProvider && !hasEmailProvider && (
+            <div>
+              <Alert
+                message="Demo Mode"
+                description="For demonstration purposes, you can continue without authentication. Real authentication requires Google OAuth setup."
+                type="info"
+                className="mb-4"
+              />
+              <Button
+                type="primary"
+                size="large"
+                block
+                onClick={() => router.push('/worker')}
+                className="h-12"
+              >
+                Continue as Demo Worker
+              </Button>
+              <Button
+                size="large"
+                block
+                onClick={() => router.push('/manager')}
+                className="h-12 mt-2"
+              >
+                Continue as Demo Manager
+              </Button>
+            </div>
+          )}
 
           <div className="text-center mt-6">
             <Text type="secondary" className="text-sm">
-              Sign in to access your healthcare shift management dashboard.
-              <br />
-              <br />
-              <strong>Demo Role Assignment:</strong>
-              <br />
-              • Emails containing &quot;manager&quot; → Manager access
-              <br />
-              • All other emails → Worker access
+              {hasGoogleProvider || hasEmailProvider ? (
+                <>
+                  Sign in to access your healthcare shift management dashboard.
+                  <br />
+                  <br />
+                  <strong>Role Assignment:</strong>
+                  <br />
+                  • Emails containing &quot;manager&quot; → Manager access
+                  <br />
+                  • All other emails → Worker access
+                </>
+              ) : (
+                <>
+                  To enable real authentication:
+                  <br />
+                  1. Set up Google OAuth credentials
+                  <br />
+                  2. Configure email SMTP settings
+                  <br />
+                  3. Update your .env.local file
+                </>
+              )}
             </Text>
           </div>
         </Space>
