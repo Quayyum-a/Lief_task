@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
-import { useUser } from '@/context/AuthContext'
+import { useSession } from 'next-auth/react'
 import { message } from 'antd'
 import type { 
   ShiftContextType, 
@@ -141,7 +141,7 @@ function isWithinPerimeter(userLocation: Location, perimeter: Perimeter): boolea
 
 // Provider component
 export function ShiftProvider({ children }: { children: ReactNode }) {
-  const { user, isLoading: authLoading } = useUser()
+  const { data: session, status } = useSession()
   
   const [state, dispatch] = useReducer(shiftReducer, {
     currentUser: null,
@@ -152,25 +152,25 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     dashboardStats: initialDashboardStats,
     isClockingIn: false,
     isClockingOut: false,
-    isLoading: authLoading,
+    isLoading: status === 'loading',
   })
 
-  // Set user from Auth0
+  // Set user from NextAuth session
   useEffect(() => {
-    if (user) {
+    if (session?.user) {
       const currentUser: User = {
-        id: user.sub || '',
-        email: user.email || '',
-        name: user.name || '',
-        role: user.email?.includes('manager') ? 'manager' : 'worker',
-        picture: user.picture,
+        id: session.user.id,
+        email: session.user.email || '',
+        name: session.user.name || '',
+        role: session.user.role,
+        picture: session.user.image,
       }
       dispatch({ type: 'SET_USER', payload: currentUser })
     } else {
       dispatch({ type: 'SET_USER', payload: null })
     }
-    dispatch({ type: 'SET_LOADING', payload: authLoading })
-  }, [user, authLoading])
+    dispatch({ type: 'SET_LOADING', payload: status === 'loading' })
+  }, [session, status])
 
   // Geolocation tracking
   useEffect(() => {
