@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ConfigProvider } from 'antd'
-import { UserProvider } from '@auth0/nextjs-auth0'
+import { AuthProvider } from '@/context/AuthContext'
 import { ShiftProvider } from '@/context/ShiftContext'
 import PWAInstaller from '@/components/shared/PWAInstaller'
 import './globals.css'
@@ -28,7 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <UserProvider>
+        <AuthProvider>
           <ConfigProvider
             theme={{
               token: {
@@ -51,7 +51,7 @@ export default function RootLayout({
               <PWAInstaller />
             </ShiftProvider>
           </ConfigProvider>
-        </UserProvider>
+        </AuthProvider>
       </body>
     </html>
   )
