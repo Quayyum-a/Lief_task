@@ -1,10 +1,10 @@
 'use client'
 
-import { Card, Button, Space, Typography, Divider } from 'antd'
-import { GoogleOutlined, UserOutlined, MailOutlined } from '@ant-design/icons'
+import { Card, Button, Space, Typography, Divider, Alert } from 'antd'
+import { GoogleOutlined, UserOutlined, MailOutlined, WarningOutlined } from '@ant-design/icons'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
 const { Title, Text } = Typography
@@ -12,6 +12,7 @@ const { Title, Text } = Typography
 export default function LoginForm() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const [authError, setAuthError] = useState(false)
 
   useEffect(() => {
     if (session?.user && status === 'authenticated') {
@@ -20,6 +21,23 @@ export default function LoginForm() {
       router.push(isManager ? '/manager' : '/worker')
     }
   }, [session, status, router])
+
+  useEffect(() => {
+    // Check for auth configuration issues
+    if (status === 'unauthenticated') {
+      // Try to detect if NextAuth is properly configured
+      fetch('/api/auth/providers')
+        .then(res => res.json())
+        .then(providers => {
+          if (!providers || Object.keys(providers).length === 0) {
+            setAuthError(true)
+          }
+        })
+        .catch(() => {
+          setAuthError(true)
+        })
+    }
+  }, [status])
 
   if (status === 'loading') {
     return (
@@ -57,6 +75,17 @@ export default function LoginForm() {
           </Text>
         </div>
 
+        {authError && (
+          <Alert
+            message="Authentication Setup Needed"
+            description="Google OAuth is not configured. Set up your credentials to enable real authentication."
+            type="warning"
+            icon={<WarningOutlined />}
+            className="mb-6"
+            showIcon
+          />
+        )}
+
         <Space direction="vertical" size="large" className="w-full">
           <div>
             <Link href="/auth/signin">
@@ -87,16 +116,56 @@ export default function LoginForm() {
             </Link>
           </div>
 
+          {authError && (
+            <>
+              <Divider>Demo Access</Divider>
+              <div>
+                <Link href="/worker">
+                  <Button
+                    size="large"
+                    block
+                    className="h-12 mb-2"
+                  >
+                    Demo Worker Access
+                  </Button>
+                </Link>
+                <Link href="/manager">
+                  <Button
+                    size="large"
+                    block
+                    className="h-12"
+                  >
+                    Demo Manager Access
+                  </Button>
+                </Link>
+              </div>
+            </>
+          )}
+
           <div className="text-center mt-6">
             <Text type="secondary" className="text-sm">
-              Sign in to access your healthcare shift management dashboard.
-              <br />
-              <br />
-              <strong>Role Assignment:</strong>
-              <br />
-              • Emails containing &quot;manager&quot; → Manager access
-              <br />
-              • All other emails → Worker access
+              {authError ? (
+                <>
+                  To enable real authentication:
+                  <br />
+                  1. Set up Google OAuth in Google Console
+                  <br />
+                  2. Add credentials to .env.local
+                  <br />
+                  3. Restart the development server
+                </>
+              ) : (
+                <>
+                  Sign in to access your healthcare shift management dashboard.
+                  <br />
+                  <br />
+                  <strong>Role Assignment:</strong>
+                  <br />
+                  • Emails containing &quot;manager&quot; → Manager access
+                  <br />
+                  • All other emails → Worker access
+                </>
+              )}
             </Text>
           </div>
         </Space>
