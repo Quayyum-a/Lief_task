@@ -29,7 +29,7 @@ const { Title } = Typography
 export default function StaffOverview() {
   const { allStaff, dashboardStats, refreshData, isLoading } = useShift()
 
-  const columns: ColumnsType<StaffMember> = [
+  const columns: ColumnsType<any> = [
     {
       title: 'Staff Member',
       dataIndex: 'name',
