@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Layout, Menu, Button, Space, Drawer } from 'antd'
 import {
-  DashboardOutlined,
   TeamOutlined,
   EnvironmentOutlined,
   BarChartOutlined,
