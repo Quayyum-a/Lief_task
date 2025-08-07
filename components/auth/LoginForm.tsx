@@ -88,7 +88,7 @@ export default function LoginForm() {
             <Text type="secondary" className="text-sm">
               For demo purposes:
               <br />
-              • Use any email with "manager" to access manager features
+              • Use any email with &quot;manager&quot; to access manager features
               <br />
               • Use any other email for worker features
             </Text>
