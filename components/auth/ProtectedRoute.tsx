@@ -1,6 +1,6 @@
 'use client'
 
-import { useUser } from '@auth0/nextjs-auth0'
+import { useUser } from '@/context/AuthContext'
 import { Card, Spin } from 'antd'
 import { useRouter } from 'next/navigation'
 import { useEffect, ReactNode } from 'react'
