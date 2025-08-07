@@ -31,6 +31,7 @@ A comprehensive web application for healthcare workers to clock in and out of th
 - **Ant Design** for UI components
 - **Tailwind CSS** for responsive styling
 - **Chart.js** for data visualization
+- **React Context** for state management
 - **PWA** with service worker support
 - **Geolocation API** for location services
 
@@ -180,7 +181,7 @@ Add production callback URL to Google Console:
 https://yourdomain.com/api/auth/callback/google
 ```
 
-## 📊 Database Schema
+## 📈 Database Schema
 
 The application uses Prisma with the following models:
 
