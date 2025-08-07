@@ -31,15 +31,12 @@ export default function WorkerDashboard() {
           
           <Space>
             <span className="hidden sm:inline text-gray-600">
-              Welcome, {user?.name?.split(' ')[0]}
+              Welcome, {session?.user?.name?.split(' ')[0]}
             </span>
             <Button
               type="text"
               icon={<LogoutOutlined />}
-              onClick={() => {
-                document.cookie = 'auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT'
-                window.location.href = '/'
-              }}
+              onClick={() => signOut()}
               className="text-gray-600 hover:text-gray-900"
             >
               <span className="hidden sm:inline ml-1">Logout</span>
