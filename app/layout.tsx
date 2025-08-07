@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { ConfigProvider } from 'antd'
-import { AuthProvider } from '@/context/AuthContext'
+import AuthProvider from '@/components/auth/AuthProvider'
 import { ShiftProvider } from '@/context/ShiftContext'
 import PWAInstaller from '@/components/shared/PWAInstaller'
 import './globals.css'
