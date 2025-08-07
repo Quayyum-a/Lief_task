@@ -1,26 +1,27 @@
 'use client'
 
 import { Card, Button, Space, Typography, Divider } from 'antd'
-import { GoogleOutlined, UserOutlined, LockOutlined } from '@ant-design/icons'
-import { useUser } from '@/context/AuthContext'
+import { GoogleOutlined, UserOutlined, MailOutlined } from '@ant-design/icons'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import Link from 'next/link'
 
 const { Title, Text } = Typography
 
 export default function LoginForm() {
-  const { user, isLoading } = useUser()
+  const { data: session, status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
-    if (user && !isLoading) {
+    if (session?.user && status === 'authenticated') {
       // Redirect based on user role
-      const isManager = user.email?.includes('manager')
+      const isManager = session.user.role === 'manager'
       router.push(isManager ? '/manager' : '/worker')
     }
-  }, [user, isLoading, router])
+  }, [session, status, router])
 
-  if (isLoading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card loading className="w-full max-w-md" />
@@ -28,7 +29,7 @@ export default function LoginForm() {
     )
   }
 
-  if (user) {
+  if (session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
@@ -58,39 +59,44 @@ export default function LoginForm() {
 
         <Space direction="vertical" size="large" className="w-full">
           <div>
-            <Button
-              type="primary"
-              icon={<GoogleOutlined />}
-              size="large"
-              block
-              href="/auth/callback?role=worker"
-              className="h-12 flex items-center justify-center"
-            >
-              Demo Worker Login
-            </Button>
+            <Link href="/auth/signin">
+              <Button
+                type="primary"
+                icon={<GoogleOutlined />}
+                size="large"
+                block
+                className="h-12 flex items-center justify-center"
+              >
+                Sign in with Google
+              </Button>
+            </Link>
           </div>
 
           <Divider>or</Divider>
 
           <div>
-            <Button
-              icon={<LockOutlined />}
-              size="large"
-              block
-              href="/auth/callback?role=manager"
-              className="h-12 flex items-center justify-center"
-            >
-              Demo Manager Login
-            </Button>
+            <Link href="/auth/signin">
+              <Button
+                icon={<MailOutlined />}
+                size="large"
+                block
+                className="h-12 flex items-center justify-center"
+              >
+                Sign in with Email
+              </Button>
+            </Link>
           </div>
 
           <div className="text-center mt-6">
             <Text type="secondary" className="text-sm">
-              For demo purposes:
+              Sign in to access your healthcare shift management dashboard.
               <br />
-              • Use any email with &quot;manager&quot; to access manager features
               <br />
-              • Use any other email for worker features
+              <strong>Role Assignment:</strong>
+              <br />
+              • Emails containing &quot;manager&quot; → Manager access
+              <br />
+              • All other emails → Worker access
             </Text>
           </div>
         </Space>
