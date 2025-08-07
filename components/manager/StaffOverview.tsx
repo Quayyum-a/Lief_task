@@ -115,7 +115,7 @@ export default function StaffOverview() {
     {
       title: 'Actions',
       key: 'actions',
-      render: (_, record: StaffMember) => (
+      render: () => (
         <Space>
           <Button 
             type="text" 
