@@ -1,6 +1,6 @@
 'use client'
 
-import { useUser } from '@/context/AuthContext'
+import { useSession } from 'next-auth/react'
 import { Card, Spin } from 'antd'
 import { useRouter } from 'next/navigation'
 import { useEffect, ReactNode } from 'react'
@@ -11,26 +11,25 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, isLoading } = useUser()
+  const { data: session, status } = useSession()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/')
+    if (status === 'loading') return // Still loading
+
+    if (!session) {
+      router.push('/auth/signin')
       return
     }
 
-    if (user && requiredRole) {
-      const userRole = user.email?.includes('manager') ? 'manager' : 'worker'
-      if (userRole !== requiredRole) {
-        // Redirect to appropriate dashboard
-        router.push(userRole === 'manager' ? '/manager' : '/worker')
-        return
-      }
+    if (requiredRole && session.user.role !== requiredRole) {
+      // Redirect to appropriate dashboard
+      router.push(session.user.role === 'manager' ? '/manager' : '/worker')
+      return
     }
-  }, [user, isLoading, requiredRole, router])
+  }, [session, status, requiredRole, router])
 
-  if (isLoading) {
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Card className="w-full max-w-md">
@@ -46,15 +45,12 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
     )
   }
 
-  if (!user) {
+  if (!session) {
     return null // Will redirect to login
   }
 
-  if (requiredRole) {
-    const userRole = user.email?.includes('manager') ? 'manager' : 'worker'
-    if (userRole !== requiredRole) {
-      return null // Will redirect to appropriate dashboard
-    }
+  if (requiredRole && session.user.role !== requiredRole) {
+    return null // Will redirect to appropriate dashboard
   }
 
   return <>{children}</>
