@@ -59,7 +59,7 @@ export default function PerimeterManagement() {
       form.resetFields()
       setIsModalOpen(false)
       setEditingPerimeter(null)
-    } catch (error) {
+    } catch {
       message.error('Failed to save perimeter')
     } finally {
       setIsSubmitting(false)
