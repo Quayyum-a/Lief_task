@@ -9,7 +9,7 @@ import {
   LogoutOutlined,
   MenuOutlined,
 } from '@ant-design/icons'
-import { useUser } from '@/context/AuthContext'
+import { useSession, signOut } from 'next-auth/react'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import StaffOverview from '@/components/manager/StaffOverview'
 import AnalyticsDashboard from '@/components/manager/AnalyticsDashboard'
