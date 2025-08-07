@@ -38,7 +38,7 @@ const menuItems = [
 ]
 
 export default function ManagerDashboard() {
-  const { user } = useUser()
+  const { data: session } = useSession()
   const [activeTab, setActiveTab] = useState<TabKey>('overview')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
