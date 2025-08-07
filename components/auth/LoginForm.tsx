@@ -63,10 +63,10 @@ export default function LoginForm() {
               icon={<GoogleOutlined />}
               size="large"
               block
-              href="/api/auth/login"
+              href="/auth/callback?role=worker"
               className="h-12 flex items-center justify-center"
             >
-              Sign in with Google
+              Demo Worker Login
             </Button>
           </div>
 
@@ -77,10 +77,10 @@ export default function LoginForm() {
               icon={<LockOutlined />}
               size="large"
               block
-              href="/api/auth/login"
+              href="/auth/callback?role=manager"
               className="h-12 flex items-center justify-center"
             >
-              Sign in with Email
+              Demo Manager Login
             </Button>
           </div>
 
