@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import React from 'react'
 import { Card, Row, Col, Statistic, Typography } from 'antd'
 import { 
   Chart as ChartJS,
