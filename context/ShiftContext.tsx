@@ -6,6 +6,7 @@ import { message } from 'antd'
 import { useLocation } from '@/hooks/useLocation'
 import { perimeterManager, defaultPerimeters } from '@/lib/perimeter'
 import { clockManager } from '@/lib/clock'
+import { notificationService } from '@/lib/notifications'
 import type {
   ShiftContextType,
   User,
@@ -179,6 +180,9 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       }
       dispatch({ type: 'SET_USER', payload: currentUser })
 
+      // Initialize notification service
+      notificationService.initialize()
+
       // Check if user has an active shift
       const activeShift = clockManager.getActiveShift(session.user.id)
       if (activeShift) {
@@ -235,6 +239,9 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
       // Check if within any perimeter using new perimeter manager
       const perimeterResult = perimeterManager.checkLocation(location)
       const nearestPerimeter = perimeterResult.perimeter
+
+      // Process location for notifications
+      notificationService.processLocationUpdate(location)
 
       dispatch({
         type: 'SET_GEOLOCATION',
