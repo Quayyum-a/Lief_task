@@ -178,10 +178,30 @@ When creating new components:
    
    export default function MyComponent() {
      const { currentUser } = useShift()
-     
+     const [loading, setLoading] = useState(false)
+
+     const handleAction = async () => {
+       setLoading(true)
+       try {
+         // Component logic here
+         console.log('Action performed')
+       } finally {
+         setLoading(false)
+       }
+     }
+
      return (
        <Card title="My Component">
-         {/* Component content */}
+         <div>
+           <p>Welcome, {currentUser?.name}</p>
+           <Button
+             type="primary"
+             loading={loading}
+             onClick={handleAction}
+           >
+             Perform Action
+           </Button>
+         </div>
        </Card>
      )
    }
