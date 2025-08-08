@@ -64,13 +64,16 @@ export default function PerimeterManagement() {
     if (location) {
       const status: typeof locationStatus = {}
       perimeters.forEach(perimeter => {
-        const result = perimeterManager.checkLocation(location, {
-          perimeter: {
-            centerLatitude: perimeter.centerLat,
-            centerLongitude: perimeter.centerLng,
-            radiusInMeters: perimeter.radiusKm * 1000
-          }
-        })
+        const perimeterSettings = {
+          centerLatitude: perimeter.centerLat,
+          centerLongitude: perimeter.centerLng,
+          radiusInMeters: perimeter.radiusKm * 1000
+        }
+
+        // Temporarily set this perimeter for checking
+        perimeterManager.setPerimeters([perimeterSettings])
+        const result = perimeterManager.checkLocation(location)
+
         status[perimeter.id] = {
           distance: result.distance,
           isWithin: result.isWithin
