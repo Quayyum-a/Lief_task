@@ -167,7 +167,7 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     isLoading: status === 'loading',
   })
 
-  // Set user from NextAuth session
+  // Set user from NextAuth session and sync with clock manager
   useEffect(() => {
     if (session?.user) {
       const currentUser: User = {
@@ -178,8 +178,29 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
         picture: session.user.image,
       }
       dispatch({ type: 'SET_USER', payload: currentUser })
+
+      // Check if user has an active shift
+      const activeShift = clockManager.getActiveShift(session.user.id)
+      if (activeShift) {
+        const shift: Shift = {
+          id: activeShift.id,
+          userId: activeShift.userId,
+          clockIn: {
+            id: activeShift.clockIn.id,
+            userId: activeShift.clockIn.userId,
+            type: 'clock_in' as const,
+            timestamp: activeShift.clockIn.timestamp,
+            location: activeShift.clockIn.location,
+            note: activeShift.clockIn.note,
+            perimeterId: activeShift.clockIn.perimeterId,
+          },
+          status: 'active',
+        }
+        dispatch({ type: 'SET_CURRENT_SHIFT', payload: shift })
+      }
     } else {
       dispatch({ type: 'SET_USER', payload: null })
+      dispatch({ type: 'SET_CURRENT_SHIFT', payload: null })
     }
     dispatch({ type: 'SET_LOADING', payload: status === 'loading' })
   }, [session, status])
