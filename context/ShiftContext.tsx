@@ -3,15 +3,18 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
 import { message } from 'antd'
-import type { 
-  ShiftContextType, 
-  User, 
-  Shift, 
-  StaffMember, 
-  Perimeter, 
-  DashboardStats, 
+import { useLocation } from '@/hooks/useLocation'
+import { perimeterManager, defaultPerimeters } from '@/lib/perimeter'
+import { clockManager } from '@/lib/clock'
+import type {
+  ShiftContextType,
+  User,
+  Shift,
+  StaffMember,
+  Perimeter,
+  DashboardStats,
   GeolocationState,
-  Location 
+  Location
 } from '@/types'
 
 // Initial state
@@ -29,14 +32,17 @@ const initialDashboardStats: DashboardStats = {
   weeklyHoursByStaff: [],
 }
 
+// Initialize perimeter manager with default perimeters
+perimeterManager.setPerimeters(defaultPerimeters)
+
 // Mock data for MVP
 const mockPerimeters: Perimeter[] = [
   {
     id: '1',
     name: 'Main Hospital',
-    centerLat: 40.7128,
-    centerLng: -74.0060,
-    radiusKm: 2,
+    centerLat: 40.7831, // Times Square
+    centerLng: -73.9712,
+    radiusKm: 0.5, // 500 meters
     createdBy: 'manager',
     createdAt: new Date().toISOString(),
   }
@@ -142,7 +148,13 @@ function isWithinPerimeter(userLocation: Location, perimeter: Perimeter): boolea
 // Provider component
 export function ShiftProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
-  
+  const {
+    location,
+    error: locationError,
+    permissionState,
+    isSupported
+  } = useLocation({ watch: true })
+
   const [state, dispatch] = useReducer(shiftReducer, {
     currentUser: null,
     currentShift: null,
@@ -172,106 +184,106 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_LOADING', payload: status === 'loading' })
   }, [session, status])
 
-  // Geolocation tracking
+  // Update geolocation state when location changes
   useEffect(() => {
     if (!state.currentUser) return
 
-    const watchLocation = () => {
-      dispatch({ type: 'SET_GEOLOCATION', payload: { isLoading: true } })
-
-      if (!navigator.geolocation) {
-        dispatch({ 
-          type: 'SET_GEOLOCATION', 
-          payload: { 
-            isLoading: false,
-            error: 'Geolocation is not supported by this browser.' 
-          }
-        })
-        return
-      }
-
-      const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          const location: Location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
-            timestamp: Date.now(),
-          }
-
-          // Check if within any perimeter
-          const nearestPerimeter = state.perimeters[0] // For MVP, use first perimeter
-          const isInPerimeter = nearestPerimeter ? 
-            isWithinPerimeter(location, nearestPerimeter) : false
-
-          dispatch({ 
-            type: 'SET_GEOLOCATION', 
-            payload: { 
-              location,
-              isLoading: false,
-              error: null,
-              isInPerimeter,
-              nearestPerimeter: isInPerimeter ? nearestPerimeter : undefined,
-            }
-          })
-        },
-        (error) => {
-          dispatch({ 
-            type: 'SET_GEOLOCATION', 
-            payload: { 
-              isLoading: false,
-              error: error.message 
-            }
-          })
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 60000, // 1 minute
+    if (!isSupported) {
+      dispatch({
+        type: 'SET_GEOLOCATION',
+        payload: {
+          isLoading: false,
+          error: 'Geolocation is not supported by this browser.'
         }
-      )
-
-      return () => navigator.geolocation.clearWatch(watchId)
+      })
+      return
     }
 
-    const cleanup = watchLocation()
-    return cleanup
-  }, [state.currentUser, state.perimeters])
+    if (locationError) {
+      dispatch({
+        type: 'SET_GEOLOCATION',
+        payload: {
+          isLoading: false,
+          error: locationError.message
+        }
+      })
+      return
+    }
+
+    if (location) {
+      // Check if within any perimeter using new perimeter manager
+      const perimeterResult = perimeterManager.checkLocation(location)
+      const nearestPerimeter = perimeterResult.perimeter
+
+      dispatch({
+        type: 'SET_GEOLOCATION',
+        payload: {
+          location: {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            accuracy: location.accuracy,
+            timestamp: location.timestamp,
+          },
+          isLoading: false,
+          error: null,
+          isInPerimeter: perimeterResult.isWithin,
+          nearestPerimeter: nearestPerimeter ? {
+            id: '1',
+            name: 'Main Work Area',
+            centerLat: nearestPerimeter.centerLatitude,
+            centerLng: nearestPerimeter.centerLongitude,
+            radiusKm: nearestPerimeter.radiusInMeters / 1000,
+            createdBy: 'manager',
+            createdAt: new Date().toISOString(),
+          } : undefined,
+        }
+      })
+    } else if (permissionState === 'granted') {
+      dispatch({
+        type: 'SET_GEOLOCATION',
+        payload: { isLoading: true }
+      })
+    }
+  }, [state.currentUser, location, locationError, permissionState, isSupported])
 
   // Actions
   const clockIn = async (note?: string) => {
-    if (!state.currentUser || !state.geolocation.location) return
-
-    if (!state.geolocation.isInPerimeter) {
-      message.error('You must be within the designated perimeter to clock in')
+    if (!state.currentUser || !state.geolocation.location) {
+      message.error('Location information is required to clock in')
       return
     }
 
     dispatch({ type: 'SET_CLOCKING_IN', payload: true })
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const result = await clockManager.clockIn(
+        state.currentUser.id,
+        state.geolocation.location,
+        note
+      )
 
-      const clockInEvent = {
-        id: `clock_in_${Date.now()}`,
-        userId: state.currentUser.id,
-        type: 'clock_in' as const,
-        timestamp: new Date().toISOString(),
-        location: state.geolocation.location,
-        note,
-        perimeterId: state.geolocation.nearestPerimeter?.id,
+      if (result.success) {
+        // Convert clock manager shift to our shift format
+        const newShift: Shift = {
+          id: result.shift!.id,
+          userId: result.shift!.userId,
+          clockIn: {
+            id: result.shift!.clockIn.id,
+            userId: result.shift!.clockIn.userId,
+            type: 'clock_in' as const,
+            timestamp: result.shift!.clockIn.timestamp,
+            location: result.shift!.clockIn.location,
+            note: result.shift!.clockIn.note,
+            perimeterId: result.shift!.clockIn.perimeterId,
+          },
+          status: 'active',
+        }
+
+        dispatch({ type: 'SET_CURRENT_SHIFT', payload: newShift })
+        message.success(result.message)
+      } else {
+        message.error(result.message)
       }
-
-      const newShift: Shift = {
-        id: `shift_${Date.now()}`,
-        userId: state.currentUser.id,
-        clockIn: clockInEvent,
-        status: 'active',
-      }
-
-      dispatch({ type: 'SET_CURRENT_SHIFT', payload: newShift })
-      message.success('Successfully clocked in!')
     } catch (error) {
       message.error('Failed to clock in. Please try again.')
     } finally {
@@ -280,36 +292,31 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
   }
 
   const clockOut = async (note?: string) => {
-    if (!state.currentUser || !state.currentShift || !state.geolocation.location) return
+    if (!state.currentUser || !state.geolocation.location) {
+      message.error('Location information is required to clock out')
+      return
+    }
+
+    if (!state.currentShift) {
+      message.error('You are not currently clocked in')
+      return
+    }
 
     dispatch({ type: 'SET_CLOCKING_OUT', payload: true })
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const result = await clockManager.clockOut(
+        state.currentUser.id,
+        state.geolocation.location,
+        note
+      )
 
-      const clockOutEvent = {
-        id: `clock_out_${Date.now()}`,
-        userId: state.currentUser.id,
-        type: 'clock_out' as const,
-        timestamp: new Date().toISOString(),
-        location: state.geolocation.location,
-        note,
+      if (result.success) {
+        dispatch({ type: 'SET_CURRENT_SHIFT', payload: null })
+        message.success(result.message)
+      } else {
+        message.error(result.message)
       }
-
-      const clockInTime = new Date(state.currentShift.clockIn.timestamp)
-      const clockOutTime = new Date(clockOutEvent.timestamp)
-      const totalHours = (clockOutTime.getTime() - clockInTime.getTime()) / (1000 * 60 * 60)
-
-      const updatedShift: Shift = {
-        ...state.currentShift,
-        clockOut: clockOutEvent,
-        totalHours,
-        status: 'completed',
-      }
-
-      dispatch({ type: 'SET_CURRENT_SHIFT', payload: null })
-      message.success(`Successfully clocked out! Total hours: ${totalHours.toFixed(2)}`)
     } catch (error) {
       message.error('Failed to clock out. Please try again.')
     } finally {
@@ -321,16 +328,26 @@ export function ShiftProvider({ children }: { children: ReactNode }) {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       const newPerimeter: Perimeter = {
         ...perimeter,
         id: `perimeter_${Date.now()}`,
         createdAt: new Date().toISOString(),
       }
 
-      dispatch({ 
-        type: 'SET_PERIMETERS', 
-        payload: [newPerimeter, ...state.perimeters] 
+      // Update perimeter manager
+      const perimeterSettings = {
+        centerLatitude: newPerimeter.centerLat,
+        centerLongitude: newPerimeter.centerLng,
+        radiusInMeters: newPerimeter.radiusKm * 1000,
+        name: newPerimeter.name
+      }
+
+      perimeterManager.setPerimeters([perimeterSettings])
+
+      dispatch({
+        type: 'SET_PERIMETERS',
+        payload: [newPerimeter, ...state.perimeters]
       })
       message.success('Perimeter updated successfully!')
     } catch (error) {
