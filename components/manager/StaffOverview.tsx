@@ -1,228 +1,488 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { 
   Card, 
   Table, 
   Tag, 
-  Space, 
   Button, 
+  Space, 
+  Typography, 
   Row, 
   Col, 
-  Statistic,
+  Statistic, 
   Badge,
   Avatar,
-  Typography
+  Tooltip,
+  Select,
+  DatePicker,
+  Input,
+  Alert,
+  Modal,
+  List,
+  Divider
 } from 'antd'
 import { 
   UserOutlined, 
   ClockCircleOutlined, 
   EnvironmentOutlined,
   EyeOutlined,
+  StopOutlined,
+  ExclamationCircleOutlined,
+  CheckCircleOutlined,
+  SearchOutlined,
+  FilterOutlined,
   ReloadOutlined
 } from '@ant-design/icons'
 import { useShift } from '@/context/ShiftContext'
-import { StaffMember } from '@/types'
-import type { ColumnsType } from 'antd/es/table'
+import { clockManager } from '@/lib/clock'
+import { perimeterManager } from '@/lib/perimeter'
 
-const { Title } = Typography
+const { Title, Text } = Typography
+const { Search } = Input
+const { RangePicker } = DatePicker
+
+interface StaffMember {
+  id: string
+  name: string
+  email: string
+  role: string
+  isOnline: boolean
+  lastSeen: string
+  currentShift?: any
+  location?: {
+    latitude: number
+    longitude: number
+    accuracy?: number
+    timestamp: number
+  }
+  totalHoursThisWeek?: number
+  shiftsThisWeek?: number
+}
 
 export default function StaffOverview() {
-  const { allStaff, dashboardStats, refreshData, isLoading } = useShift()
+  const { allStaff, refreshData, currentUser } = useShift()
+  const [staffData, setStaffData] = useState<StaffMember[]>([])
+  const [loading, setLoading] = useState(false)
+  const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null)
+  const [filterStatus, setFilterStatus] = useState<'all' | 'online' | 'clocked-in' | 'clocked-out'>('all')
+  const [searchTerm, setSearchTerm] = useState('')
 
-  const columns: ColumnsType<any> = [
+  // Mock real-time staff data with shifts
+  useEffect(() => {
+    const generateMockStaffData = (): StaffMember[] => {
+      const activeShifts = clockManager.getAllActiveShifts()
+      
+      return allStaff.map(staff => {
+        const activeShift = activeShifts.find(shift => shift.userId === staff.id)
+        const mockLocation = {
+          latitude: 40.7831 + (Math.random() - 0.5) * 0.01, // Near Times Square
+          longitude: -73.9712 + (Math.random() - 0.5) * 0.01,
+          accuracy: Math.random() * 50 + 5,
+          timestamp: Date.now()
+        }
+
+        return {
+          ...staff,
+          currentShift: activeShift,
+          location: staff.isOnline ? mockLocation : undefined,
+          totalHoursThisWeek: Math.random() * 40 + 10,
+          shiftsThisWeek: Math.floor(Math.random() * 7) + 1
+        }
+      })
+    }
+
+    setStaffData(generateMockStaffData())
+
+    // Update every 30 seconds for real-time effect
+    const interval = setInterval(() => {
+      setStaffData(generateMockStaffData())
+    }, 30000)
+
+    return () => clearInterval(interval)
+  }, [allStaff])
+
+  const handleRefresh = async () => {
+    setLoading(true)
+    try {
+      await refreshData()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleForceClockOut = async (staffId: string, staffName: string) => {
+    Modal.confirm({
+      title: 'Force Clock Out',
+      content: `Are you sure you want to force clock out ${staffName}? This should only be done if the worker forgot to clock out.`,
+      okText: 'Force Clock Out',
+      okType: 'danger',
+      onOk: async () => {
+        try {
+          await clockManager.forceClockOut(staffId, currentUser?.id || '', 'Manager forced clock out')
+          handleRefresh()
+        } catch (error) {
+          console.error('Failed to force clock out:', error)
+        }
+      }
+    })
+  }
+
+  const getStatusTag = (staff: StaffMember) => {
+    if (staff.currentShift) {
+      return <Tag color="green" icon={<ClockCircleOutlined />}>Clocked In</Tag>
+    }
+    if (staff.isOnline) {
+      return <Tag color="blue" icon={<CheckCircleOutlined />}>Online</Tag>
+    }
+    return <Tag color="default">Offline</Tag>
+  }
+
+  const getLocationStatus = (staff: StaffMember) => {
+    if (!staff.location) return <Tag color="default">No Location</Tag>
+    
+    // Check if in perimeter
+    const result = perimeterManager.checkLocation(staff.location)
+    
+    return (
+      <Tooltip title={`${staff.location.latitude.toFixed(6)}, ${staff.location.longitude.toFixed(6)}`}>
+        <Tag 
+          color={result.isWithin ? 'green' : 'orange'}
+          icon={<EnvironmentOutlined />}
+        >
+          {result.isWithin ? 'In Area' : `${(result.distance/1000).toFixed(1)}km away`}
+        </Tag>
+      </Tooltip>
+    )
+  }
+
+  const getCurrentShiftDuration = (staff: StaffMember) => {
+    if (!staff.currentShift) return 'N/A'
+    
+    const duration = clockManager.getCurrentShiftDuration(staff.id)
+    if (!duration) return 'N/A'
+    
+    return `${duration.hours}h ${duration.minutes}m`
+  }
+
+  const filteredStaff = staffData.filter(staff => {
+    const matchesSearch = staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         staff.email.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesFilter = filterStatus === 'all' || 
+                         (filterStatus === 'online' && staff.isOnline) ||
+                         (filterStatus === 'clocked-in' && staff.currentShift) ||
+                         (filterStatus === 'clocked-out' && !staff.currentShift && staff.isOnline)
+    
+    return matchesSearch && matchesFilter
+  })
+
+  const columns = [
     {
       title: 'Staff Member',
-      dataIndex: 'name',
-      key: 'name',
-      render: (name: string, record: StaffMember) => (
+      key: 'staff',
+      render: (record: StaffMember) => (
         <Space>
-          <Avatar 
-            size="small" 
-            src={record.picture} 
-            icon={<UserOutlined />} 
-          />
+          <Avatar size="small" icon={<UserOutlined />} />
           <div>
-            <div className="font-medium">{name}</div>
-            <div className="text-xs text-gray-500">{record.email}</div>
+            <Text strong>{record.name}</Text>
+            <br />
+            <Text type="secondary" className="text-xs">{record.email}</Text>
           </div>
         </Space>
-      ),
+      )
     },
     {
       title: 'Status',
       key: 'status',
-      render: (_, record: StaffMember) => (
+      render: (record: StaffMember) => (
         <Space direction="vertical" size="small">
-          <Badge 
-            status={record.isOnline ? 'success' : 'default'} 
-            text={record.isOnline ? 'Online' : 'Offline'} 
-          />
-          {record.currentShift ? (
-            <Tag color="blue" icon={<ClockCircleOutlined />}>
-              Clocked In
-            </Tag>
-          ) : (
-            <Tag color="default">
-              Clocked Out
-            </Tag>
-          )}
+          {getStatusTag(record)}
+          {getLocationStatus(record)}
         </Space>
-      ),
+      )
     },
     {
       title: 'Current Shift',
-      key: 'currentShift',
-      render: (_, record: StaffMember) => {
-        if (!record.currentShift) {
-          return <span className="text-gray-400">Not clocked in</span>
-        }
-        
-        const start = new Date(record.currentShift.clockIn.timestamp)
-        const now = new Date()
-        const diff = now.getTime() - start.getTime()
-        const hours = Math.floor(diff / (1000 * 60 * 60))
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-        
-        return (
-          <div>
-            <div className="font-medium">{hours}h {minutes}m</div>
-            <div className="text-xs text-gray-500">
-              Started: {start.toLocaleTimeString()}
+      key: 'shift',
+      render: (record: StaffMember) => (
+        <div>
+          {record.currentShift ? (
+            <div>
+              <Text strong>{getCurrentShiftDuration(record)}</Text>
+              <br />
+              <Text type="secondary" className="text-xs">
+                Started: {new Date(record.currentShift.clockIn.timestamp).toLocaleTimeString()}
+              </Text>
             </div>
-          </div>
-        )
-      },
+          ) : (
+            <Text type="secondary">Not clocked in</Text>
+          )}
+        </div>
+      )
+    },
+    {
+      title: 'This Week',
+      key: 'week',
+      render: (record: StaffMember) => (
+        <div>
+          <Text strong>{record.totalHoursThisWeek?.toFixed(1)}h</Text>
+          <br />
+          <Text type="secondary" className="text-xs">
+            {record.shiftsThisWeek} shifts
+          </Text>
+        </div>
+      )
     },
     {
       title: 'Last Seen',
-      dataIndex: 'lastSeen',
       key: 'lastSeen',
-      render: (lastSeen: string) => {
-        const date = new Date(lastSeen)
-        const now = new Date()
-        const diff = now.getTime() - date.getTime()
-        const minutes = Math.floor(diff / (1000 * 60))
-        
-        if (minutes < 1) return 'Just now'
-        if (minutes < 60) return `${minutes}m ago`
-        
-        const hours = Math.floor(minutes / 60)
-        if (hours < 24) return `${hours}h ago`
-        
-        return date.toLocaleDateString()
-      },
+      render: (record: StaffMember) => (
+        <Text type="secondary" className="text-xs">
+          {new Date(record.lastSeen).toLocaleString()}
+        </Text>
+      )
     },
     {
       title: 'Actions',
       key: 'actions',
-      render: () => (
+      render: (record: StaffMember) => (
         <Space>
           <Button 
-            type="text" 
-            icon={<EyeOutlined />} 
-            size="small"
-            disabled
+            size="small" 
+            icon={<EyeOutlined />}
+            onClick={() => setSelectedStaff(record)}
           >
-            View Details
+            View
           </Button>
-          <Button 
-            type="text" 
-            icon={<EnvironmentOutlined />} 
-            size="small"
-            disabled
-          >
-            Location
-          </Button>
+          {record.currentShift && (
+            <Button 
+              size="small" 
+              danger
+              icon={<StopOutlined />}
+              onClick={() => handleForceClockOut(record.id, record.name)}
+            >
+              Force Clock Out
+            </Button>
+          )}
         </Space>
-      ),
-    },
+      )
+    }
   ]
 
-  // Mock data for current shifts
-  const mockCurrentShifts = allStaff.slice(0, 2).map((staff, index) => ({
-    ...staff,
-    currentShift: index === 0 ? {
-      id: `shift_${Date.now()}`,
-      userId: staff.id,
-      clockIn: {
-        id: `clock_in_${Date.now()}`,
-        userId: staff.id,
-        type: 'clock_in' as const,
-        timestamp: new Date(Date.now() - (index + 1) * 3600000).toISOString(),
-        location: { latitude: 40.7128, longitude: -74.0060, timestamp: Date.now() }
-      },
-      status: 'active' as const
-    } : undefined
-  }))
+  const stats = {
+    totalStaff: staffData.length,
+    onlineStaff: staffData.filter(s => s.isOnline).length,
+    clockedInStaff: staffData.filter(s => s.currentShift).length,
+    averageHours: staffData.reduce((acc, s) => acc + (s.totalHoursThisWeek || 0), 0) / staffData.length
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Quick Stats */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={12} lg={6}>
+    <div className="max-w-7xl mx-auto p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <Title level={2}>Staff Overview</Title>
+        <Button 
+          icon={<ReloadOutlined />}
+          onClick={handleRefresh}
+          loading={loading}
+        >
+          Refresh
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <Row gutter={16}>
+        <Col xs={24} sm={6}>
           <Card>
             <Statistic
               title="Total Staff"
-              value={allStaff.length}
+              value={stats.totalStaff}
               prefix={<UserOutlined />}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Currently Clocked In"
-              value={mockCurrentShifts.filter(s => s.currentShift).length}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: '#3f8600' }}
+              title="Online Now"
+              value={stats.onlineStaff}
+              valueStyle={{ color: '#52c41a' }}
+              prefix={<CheckCircleOutlined />}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Online Staff"
-              value={allStaff.filter(s => s.isOnline).length}
-              prefix={<Badge status="success" />}
+              title="Clocked In"
+              value={stats.clockedInStaff}
               valueStyle={{ color: '#1890ff' }}
+              prefix={<ClockCircleOutlined />}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Daily Check-ins"
-              value={dashboardStats.dailyClockIns}
+              title="Avg Hours/Week"
+              value={stats.averageHours}
+              precision={1}
+              suffix="h"
               prefix={<ClockCircleOutlined />}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Staff Table */}
-      <Card 
-        title={
-          <div className="flex items-center justify-between">
-            <Title level={4} className="mb-0">Staff Overview</Title>
-            <Button 
-              icon={<ReloadOutlined />} 
-              onClick={refreshData}
-              loading={isLoading}
+      {/* Filters */}
+      <Card size="small">
+        <Row gutter={16} align="middle">
+          <Col xs={24} sm={8}>
+            <Search
+              placeholder="Search staff by name or email"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} sm={6}>
+            <Select
+              value={filterStatus}
+              onChange={setFilterStatus}
+              className="w-full"
+              suffixIcon={<FilterOutlined />}
             >
-              Refresh
-            </Button>
-          </div>
-        }
-      >
+              <Select.Option value="all">All Staff</Select.Option>
+              <Select.Option value="online">Online Only</Select.Option>
+              <Select.Option value="clocked-in">Clocked In</Select.Option>
+              <Select.Option value="clocked-out">Available</Select.Option>
+            </Select>
+          </Col>
+          <Col xs={24} sm={10}>
+            <Text type="secondary">
+              Showing {filteredStaff.length} of {staffData.length} staff members
+            </Text>
+          </Col>
+        </Row>
+      </Card>
+
+      {/* Staff Table */}
+      <Card>
         <Table
           columns={columns}
-          dataSource={mockCurrentShifts}
+          dataSource={filteredStaff}
           rowKey="id"
-          pagination={false}
+          pagination={{ 
+            pageSize: 10,
+            showSizeChanger: true,
+            showTotal: (total) => `Total ${total} staff members`
+          }}
           scroll={{ x: 800 }}
-          size="middle"
         />
       </Card>
+
+      {/* Staff Detail Modal */}
+      <Modal
+        title={selectedStaff ? `${selectedStaff.name} - Staff Details` : 'Staff Details'}
+        open={!!selectedStaff}
+        onCancel={() => setSelectedStaff(null)}
+        footer={null}
+        width={600}
+      >
+        {selectedStaff && (
+          <div>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Card size="small" title="Basic Info">
+                  <Space direction="vertical" className="w-full">
+                    <div>
+                      <Text strong>Name: </Text>
+                      <Text>{selectedStaff.name}</Text>
+                    </div>
+                    <div>
+                      <Text strong>Email: </Text>
+                      <Text>{selectedStaff.email}</Text>
+                    </div>
+                    <div>
+                      <Text strong>Role: </Text>
+                      <Text className="capitalize">{selectedStaff.role}</Text>
+                    </div>
+                    <div>
+                      <Text strong>Status: </Text>
+                      {getStatusTag(selectedStaff)}
+                    </div>
+                  </Space>
+                </Card>
+              </Col>
+              <Col span={12}>
+                <Card size="small" title="Location">
+                  {selectedStaff.location ? (
+                    <Space direction="vertical" className="w-full">
+                      <div>
+                        <Text strong>Coordinates: </Text>
+                        <Text code>
+                          {selectedStaff.location.latitude.toFixed(6)}, {selectedStaff.location.longitude.toFixed(6)}
+                        </Text>
+                      </div>
+                      <div>
+                        <Text strong>Accuracy: </Text>
+                        <Text>±{selectedStaff.location.accuracy?.toFixed(0)}m</Text>
+                      </div>
+                      <div>
+                        <Text strong>Status: </Text>
+                        {getLocationStatus(selectedStaff)}
+                      </div>
+                    </Space>
+                  ) : (
+                    <Text type="secondary">Location not available</Text>
+                  )}
+                </Card>
+              </Col>
+            </Row>
+
+            {selectedStaff.currentShift && (
+              <Card size="small" title="Current Shift" className="mt-4">
+                <Space direction="vertical" className="w-full">
+                  <div>
+                    <Text strong>Duration: </Text>
+                    <Text>{getCurrentShiftDuration(selectedStaff)}</Text>
+                  </div>
+                  <div>
+                    <Text strong>Started: </Text>
+                    <Text>{new Date(selectedStaff.currentShift.clockIn.timestamp).toLocaleString()}</Text>
+                  </div>
+                  {selectedStaff.currentShift.clockIn.note && (
+                    <div>
+                      <Text strong>Clock-in Note: </Text>
+                      <Text>{selectedStaff.currentShift.clockIn.note}</Text>
+                    </div>
+                  )}
+                </Space>
+              </Card>
+            )}
+
+            <Card size="small" title="Weekly Summary" className="mt-4">
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Statistic
+                    title="Total Hours"
+                    value={selectedStaff.totalHoursThisWeek}
+                    precision={1}
+                    suffix="hours"
+                  />
+                </Col>
+                <Col span={12}>
+                  <Statistic
+                    title="Shifts Worked"
+                    value={selectedStaff.shiftsThisWeek}
+                    suffix="shifts"
+                  />
+                </Col>
+              </Row>
+            </Card>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

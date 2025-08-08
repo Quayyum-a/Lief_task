@@ -6,12 +6,15 @@ import { useSession, signOut } from 'next-auth/react'
 import { useState } from 'react'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import ClockInterface from '@/components/worker/ClockInterface'
+import LocationPermission from '@/components/shared/LocationPermission'
+import { useLocation } from '@/hooks/useLocation'
 
 const { Header, Content } = Layout
 
 export default function WorkerDashboard() {
   const { data: session } = useSession()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { permissionState, isSupported } = useLocation()
 
   return (
     <ProtectedRoute requiredRole="worker">
@@ -45,7 +48,19 @@ export default function WorkerDashboard() {
         </Header>
 
         <Content className="bg-gray-50">
-          <ClockInterface />
+          {!isSupported || permissionState !== 'granted' ? (
+            <div className="flex items-center justify-center min-h-96 p-4">
+              <LocationPermission
+                title="Location Access Required"
+                description="HealthShift needs location access to verify you're at the correct work site for clocking in and out."
+                onPermissionGranted={() => {
+                  // Permission granted, component will re-render automatically
+                }}
+              />
+            </div>
+          ) : (
+            <ClockInterface />
+          )}
         </Content>
 
         {/* Mobile Bottom Navigation */}

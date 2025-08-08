@@ -1,257 +1,325 @@
 'use client'
 
-import { useState } from 'react'
-import {
-  Card,
-  Form,
-  Input,
-  InputNumber,
-  Button,
-  Table,
-  Space,
+import { useState, useEffect } from 'react'
+import { 
+  Card, 
+  Button, 
+  Form, 
+  Input, 
+  InputNumber, 
+  Space, 
+  Typography, 
+  List, 
+  Tag, 
+  Popconfirm, 
   Modal,
-  message,
-  Tag,
-  Typography,
   Row,
   Col,
-  Statistic
+  Alert,
+  Statistic,
+  Switch,
+  Divider
 } from 'antd'
-import {
-  PlusOutlined,
-  EnvironmentOutlined,
-  EditOutlined,
+import { 
+  PlusOutlined, 
+  EnvironmentOutlined, 
+  EditOutlined, 
   DeleteOutlined,
+  InfoCircleOutlined,
+  CheckCircleOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons'
 import { useShift } from '@/context/ShiftContext'
-import { Perimeter } from '@/types'
-import type { ColumnsType } from 'antd/es/table'
+import { perimeterManager } from '@/lib/perimeter'
+import { useLocation } from '@/hooks/useLocation'
+import LocationPermission from '@/components/shared/LocationPermission'
 
-const { Title } = Typography
-const { confirm } = Modal
+const { Title, Text, Paragraph } = Typography
+const { TextArea } = Input
 
-interface PerimeterFormData {
+interface PerimeterForm {
   name: string
   centerLat: number
   centerLng: number
   radiusKm: number
+  description?: string
 }
 
 export default function PerimeterManagement() {
   const { perimeters, setPerimeter } = useShift()
+  const { location, permissionState, requestPermission } = useLocation()
+  
   const [form] = Form.useForm()
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingPerimeter, setEditingPerimeter] = useState<Perimeter | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isModalVisible, setIsModalVisible] = useState(false)
+  const [editingPerimeter, setEditingPerimeter] = useState<any>(null)
+  const [useCurrentLocation, setUseCurrentLocation] = useState(false)
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (values: PerimeterFormData) => {
-    setIsSubmitting(true)
+  // Calculate current location status for all perimeters
+  const [locationStatus, setLocationStatus] = useState<{
+    [key: string]: { distance: number; isWithin: boolean }
+  }>({})
+
+  useEffect(() => {
+    if (location) {
+      const status: typeof locationStatus = {}
+      perimeters.forEach(perimeter => {
+        const perimeterSettings = {
+          centerLatitude: perimeter.centerLat,
+          centerLongitude: perimeter.centerLng,
+          radiusInMeters: perimeter.radiusKm * 1000
+        }
+
+        // Temporarily set this perimeter for checking
+        perimeterManager.setPerimeters([perimeterSettings])
+        const result = perimeterManager.checkLocation(location)
+
+        status[perimeter.id] = {
+          distance: result.distance,
+          isWithin: result.isWithin
+        }
+      })
+      setLocationStatus(status)
+    }
+  }, [location, perimeters])
+
+  const handleOpenModal = (perimeter?: any) => {
+    setEditingPerimeter(perimeter)
+    setIsModalVisible(true)
+    
+    if (perimeter) {
+      form.setFieldsValue({
+        name: perimeter.name,
+        centerLat: perimeter.centerLat,
+        centerLng: perimeter.centerLng,
+        radiusKm: perimeter.radiusKm,
+        description: perimeter.description || ''
+      })
+    } else {
+      form.resetFields()
+      if (location && useCurrentLocation) {
+        form.setFieldsValue({
+          centerLat: location.latitude,
+          centerLng: location.longitude,
+          radiusKm: 0.5 // Default 500m radius
+        })
+      }
+    }
+  }
+
+  const handleCloseModal = () => {
+    setIsModalVisible(false)
+    setEditingPerimeter(null)
+    setUseCurrentLocation(false)
+    form.resetFields()
+  }
+
+  const handleUseCurrentLocation = () => {
+    if (location) {
+      form.setFieldsValue({
+        centerLat: location.latitude,
+        centerLng: location.longitude
+      })
+      setUseCurrentLocation(true)
+    }
+  }
+
+  const handleSubmit = async (values: PerimeterForm) => {
+    setLoading(true)
     try {
       await setPerimeter({
         name: values.name,
         centerLat: values.centerLat,
         centerLng: values.centerLng,
         radiusKm: values.radiusKm,
-        createdBy: 'current-manager-id', // This would come from auth context
+        createdBy: 'manager',
+        description: values.description
       })
-      
-      form.resetFields()
-      setIsModalOpen(false)
-      setEditingPerimeter(null)
-    } catch {
-      message.error('Failed to save perimeter')
+      handleCloseModal()
+    } catch (error) {
+      console.error('Failed to save perimeter:', error)
     } finally {
-      setIsSubmitting(false)
+      setLoading(false)
     }
   }
 
-  const handleEdit = (perimeter: Perimeter) => {
-    setEditingPerimeter(perimeter)
-    form.setFieldsValue({
-      name: perimeter.name,
-      centerLat: perimeter.centerLat,
-      centerLng: perimeter.centerLng,
-      radiusKm: perimeter.radiusKm,
-    })
-    setIsModalOpen(true)
+  const handleDelete = async (perimeterId: string) => {
+    // In a real app, this would call an API to delete the perimeter
+    console.log('Delete perimeter:', perimeterId)
   }
 
-  const handleDelete = (perimeter: Perimeter) => {
-    confirm({
-      title: 'Delete Perimeter',
-      icon: <ExclamationCircleOutlined />,
-      content: `Are you sure you want to delete "${perimeter.name}"?`,
-      okText: 'Yes, Delete',
-      okType: 'danger',
-      cancelText: 'Cancel',
-      onOk() {
-        message.info('Delete functionality will be implemented in full version')
-      },
-    })
-  }
-
-  const columns: ColumnsType<Perimeter> = [
-    {
-      title: 'Name',
-      dataIndex: 'name',
-      key: 'name',
-      render: (name: string) => (
-        <Space>
-          <EnvironmentOutlined />
-          <span className="font-medium">{name}</span>
-        </Space>
-      ),
-    },
-    {
-      title: 'Center Coordinates',
-      key: 'coordinates',
-      render: (_, record: Perimeter) => (
-        <div className="text-sm">
-          <div>Lat: {record.centerLat.toFixed(6)}</div>
-          <div>Lng: {record.centerLng.toFixed(6)}</div>
-        </div>
-      ),
-    },
-    {
-      title: 'Radius',
-      dataIndex: 'radiusKm',
-      key: 'radiusKm',
-      render: (radius: number) => (
-        <Tag color="blue">{radius} km</Tag>
-      ),
-    },
-    {
-      title: 'Created',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date: string) => new Date(date).toLocaleDateString(),
-    },
-    {
-      title: 'Status',
-      key: 'status',
-      render: () => (
-        <Tag color="green">Active</Tag>
-      ),
-    },
-    {
-      title: 'Actions',
-      key: 'actions',
-      render: (_, record: Perimeter) => (
-        <Space>
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            size="small"
-            onClick={() => handleEdit(record)}
-          >
-            Edit
-          </Button>
-          <Button
-            type="text"
-            danger
-            icon={<DeleteOutlined />}
-            size="small"
-            onClick={() => handleDelete(record)}
-          >
-            Delete
-          </Button>
-        </Space>
-      ),
-    },
-  ]
-
-  const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      message.error('Geolocation is not supported by this browser')
-      return
+  const formatDistance = (meters: number) => {
+    if (meters < 1000) {
+      return `${meters.toFixed(0)}m`
     }
+    return `${(meters / 1000).toFixed(1)}km`
+  }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        form.setFieldsValue({
-          centerLat: position.coords.latitude,
-          centerLng: position.coords.longitude,
-        })
-        message.success('Current location set as center point')
-      },
-      () => {
-        message.error('Failed to get current location')
-      }
+  // Show location permission if not granted
+  if (permissionState !== 'granted') {
+    return (
+      <div className="max-w-4xl mx-auto p-4">
+        <Title level={2}>Perimeter Management</Title>
+        <Alert
+          message="Location Access Required"
+          description="Location access is needed to manage work perimeters and see your current position relative to them."
+          type="info"
+          className="mb-4"
+        />
+        <LocationPermission 
+          title="Enable Location for Perimeter Management"
+          description="Managers need location access to set up work perimeters and monitor their effectiveness."
+        />
+      </div>
     )
   }
 
   return (
-    <div className="space-y-6">
-      {/* Quick Stats */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} sm={8}>
-          <Card>
-            <Statistic
-              title="Total Perimeters"
-              value={perimeters.length}
-              prefix={<EnvironmentOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card>
-            <Statistic
-              title="Active Perimeters"
-              value={perimeters.length}
-              valueStyle={{ color: '#3f8600' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={8}>
-          <Card>
-            <Statistic
-              title="Staff in Perimeters"
-              value={2}
-              suffix="/ 4"
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+    <div className="max-w-6xl mx-auto p-4 space-y-6">
+      <div className="flex justify-between items-center">
+        <Title level={2}>Perimeter Management</Title>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />}
+          onClick={() => handleOpenModal()}
+        >
+          Add Perimeter
+        </Button>
+      </div>
 
-      {/* Perimeter Table */}
-      <Card
-        title={
-          <div className="flex items-center justify-between">
-            <Title level={4} className="mb-0">Location Perimeters</Title>
-            <Button
-              type="primary"
+      {/* Current Location Status */}
+      {location && (
+        <Card title={<><EnvironmentOutlined /> Current Manager Location</>} size="small">
+          <Row gutter={16}>
+            <Col span={12}>
+              <Statistic
+                title="Latitude"
+                value={location.latitude.toFixed(6)}
+                precision={6}
+              />
+            </Col>
+            <Col span={12}>
+              <Statistic
+                title="Longitude"
+                value={location.longitude.toFixed(6)}
+                precision={6}
+              />
+            </Col>
+          </Row>
+          {location.accuracy && (
+            <div className="mt-2">
+              <Text type="secondary">
+                Accuracy: ±{location.accuracy.toFixed(0)}m
+              </Text>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {/* Perimeters List */}
+      <Card title="Work Area Perimeters">
+        {perimeters.length === 0 ? (
+          <div className="text-center py-8">
+            <EnvironmentOutlined className="text-4xl text-gray-300 mb-4" />
+            <Title level={4} type="secondary">No Perimeters Configured</Title>
+            <Paragraph type="secondary">
+              Set up work area perimeters to control where workers can clock in and out.
+            </Paragraph>
+            <Button 
+              type="primary" 
               icon={<PlusOutlined />}
-              onClick={() => {
-                setEditingPerimeter(null)
-                form.resetFields()
-                setIsModalOpen(true)
-              }}
+              onClick={() => handleOpenModal()}
             >
-              Add Perimeter
+              Create First Perimeter
             </Button>
           </div>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={perimeters}
-          rowKey="id"
-          pagination={false}
-          scroll={{ x: 800 }}
-        />
+        ) : (
+          <List
+            dataSource={perimeters}
+            renderItem={(perimeter) => {
+              const status = locationStatus[perimeter.id]
+              return (
+                <List.Item
+                  actions={[
+                    <Button
+                      key="edit"
+                      type="text"
+                      icon={<EditOutlined />}
+                      onClick={() => handleOpenModal(perimeter)}
+                    >
+                      Edit
+                    </Button>,
+                    <Popconfirm
+                      key="delete"
+                      title="Delete this perimeter?"
+                      description="This will affect all workers using this perimeter."
+                      onConfirm={() => handleDelete(perimeter.id)}
+                      okText="Delete"
+                      cancelText="Cancel"
+                      okType="danger"
+                    >
+                      <Button
+                        type="text"
+                        danger
+                        icon={<DeleteOutlined />}
+                      >
+                        Delete
+                      </Button>
+                    </Popconfirm>
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={<EnvironmentOutlined className="text-2xl text-blue-600" />}
+                    title={
+                      <div className="flex items-center gap-2">
+                        <Text strong>{perimeter.name}</Text>
+                        {status && (
+                          <Tag 
+                            color={status.isWithin ? 'green' : 'blue'}
+                            icon={status.isWithin ? <CheckCircleOutlined /> : <InfoCircleOutlined />}
+                          >
+                            {status.isWithin ? 'You are here' : formatDistance(status.distance)}
+                          </Tag>
+                        )}
+                      </div>
+                    }
+                    description={
+                      <Space direction="vertical" size="small" className="w-full">
+                        <div>
+                          <Text type="secondary">
+                            Center: {perimeter.centerLat.toFixed(6)}, {perimeter.centerLng.toFixed(6)}
+                          </Text>
+                        </div>
+                        <div>
+                          <Text type="secondary">
+                            Radius: {perimeter.radiusKm}km ({(perimeter.radiusKm * 1000).toFixed(0)}m)
+                          </Text>
+                        </div>
+                        {perimeter.description && (
+                          <div>
+                            <Text type="secondary">{perimeter.description}</Text>
+                          </div>
+                        )}
+                        <div>
+                          <Text type="secondary" className="text-xs">
+                            Created: {new Date(perimeter.createdAt).toLocaleDateString()}
+                          </Text>
+                        </div>
+                      </Space>
+                    }
+                  />
+                </List.Item>
+              )
+            }}
+          />
+        )}
       </Card>
 
-      {/* Add/Edit Modal */}
+      {/* Perimeter Form Modal */}
       <Modal
         title={editingPerimeter ? 'Edit Perimeter' : 'Add New Perimeter'}
-        open={isModalOpen}
-        onCancel={() => {
-          setIsModalOpen(false)
-          setEditingPerimeter(null)
-          form.resetFields()
-        }}
+        open={isModalVisible}
+        onCancel={handleCloseModal}
         footer={null}
         width={600}
       >
@@ -259,15 +327,52 @@ export default function PerimeterManagement() {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
-          className="mt-4"
+          requiredMark={false}
         >
           <Form.Item
             name="name"
             label="Perimeter Name"
-            rules={[{ required: true, message: 'Please enter a perimeter name' }]}
+            rules={[{ required: true, message: 'Please enter a name' }]}
           >
-            <Input placeholder="e.g., Main Hospital Campus" />
+            <Input placeholder="e.g., Main Hospital, Clinic A" />
           </Form.Item>
+
+          <Form.Item
+            label="Description (Optional)"
+            name="description"
+          >
+            <TextArea 
+              rows={2} 
+              placeholder="Additional details about this work area..."
+            />
+          </Form.Item>
+
+          <Divider orientation="left">Location Settings</Divider>
+
+          {location && !editingPerimeter && (
+            <div className="mb-4">
+              <Alert
+                message="Current Location Available"
+                description={
+                  <div>
+                    <Text>Your current location: {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}</Text>
+                    <br />
+                    <Button 
+                      type="link" 
+                      size="small"
+                      onClick={handleUseCurrentLocation}
+                      className="p-0 h-auto"
+                    >
+                      Use current location as center
+                    </Button>
+                  </div>
+                }
+                type="info"
+                showIcon
+                className="mb-4"
+              />
+            </div>
+          )}
 
           <Row gutter={16}>
             <Col span={12}>
@@ -275,15 +380,15 @@ export default function PerimeterManagement() {
                 name="centerLat"
                 label="Center Latitude"
                 rules={[
-                  { required: true, message: 'Please enter latitude' },
-                  { type: 'number', min: -90, max: 90, message: 'Invalid latitude' },
+                  { required: true, message: 'Required' },
+                  { type: 'number', min: -90, max: 90, message: 'Invalid latitude' }
                 ]}
               >
                 <InputNumber
-                  className="w-full"
-                  placeholder="40.7128"
                   step={0.000001}
                   precision={6}
+                  className="w-full"
+                  placeholder="40.7831"
                 />
               </Form.Item>
             </Col>
@@ -292,65 +397,64 @@ export default function PerimeterManagement() {
                 name="centerLng"
                 label="Center Longitude"
                 rules={[
-                  { required: true, message: 'Please enter longitude' },
-                  { type: 'number', min: -180, max: 180, message: 'Invalid longitude' },
+                  { required: true, message: 'Required' },
+                  { type: 'number', min: -180, max: 180, message: 'Invalid longitude' }
                 ]}
               >
                 <InputNumber
-                  className="w-full"
-                  placeholder="-74.0060"
                   step={0.000001}
                   precision={6}
+                  className="w-full"
+                  placeholder="-73.9712"
                 />
               </Form.Item>
             </Col>
           </Row>
-
-          <div className="mb-4">
-            <Button type="dashed" onClick={getCurrentLocation} block>
-              Use Current Location as Center
-            </Button>
-          </div>
 
           <Form.Item
             name="radiusKm"
             label="Radius (kilometers)"
             rules={[
               { required: true, message: 'Please enter radius' },
-              { type: 'number', min: 0.1, max: 50, message: 'Radius must be between 0.1 and 50 km' },
+              { type: 'number', min: 0.01, max: 50, message: 'Radius must be between 0.01 and 50 km' }
             ]}
           >
             <InputNumber
-              className="w-full"
-              placeholder="2.0"
               step={0.1}
-              precision={1}
+              precision={2}
+              className="w-full"
+              placeholder="0.5"
               addonAfter="km"
             />
           </Form.Item>
 
-          <div className="bg-blue-50 p-3 rounded mb-4">
-            <p className="text-sm text-blue-700 mb-0">
-              <strong>Note:</strong> Staff members will only be able to clock in when they are within 
-              the specified radius from the center point. Make sure the radius covers all necessary 
-              work areas.
-            </p>
-          </div>
+          <Alert
+            message="Perimeter Guidelines"
+            description={
+              <ul className="text-sm mt-2 ml-4">
+                <li>Choose a radius that covers the work area but isn't too large</li>
+                <li>Consider building size and parking areas</li>
+                <li>Test the perimeter by walking the boundaries</li>
+                <li>Typical hospital perimeters: 200m - 1km radius</li>
+              </ul>
+            }
+            type="info"
+            showIcon
+            className="mb-4"
+          />
 
-          <Form.Item className="mb-0">
-            <Space className="w-full justify-end">
-              <Button onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={isSubmitting}
-              >
-                {editingPerimeter ? 'Update' : 'Create'} Perimeter
-              </Button>
-            </Space>
-          </Form.Item>
+          <div className="flex justify-end gap-2">
+            <Button onClick={handleCloseModal}>
+              Cancel
+            </Button>
+            <Button 
+              type="primary" 
+              htmlType="submit"
+              loading={loading}
+            >
+              {editingPerimeter ? 'Update' : 'Create'} Perimeter
+            </Button>
+          </div>
         </Form>
       </Modal>
     </div>

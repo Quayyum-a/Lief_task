@@ -23,6 +23,7 @@ import {
   UserOutlined
 } from '@ant-design/icons'
 import { useShift } from '@/context/ShiftContext'
+import NotificationDisplay from '@/components/shared/NotificationDisplay'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
@@ -226,6 +227,9 @@ export default function ClockInterface() {
           )}
         </Space>
       </Card>
+
+      {/* Notifications */}
+      <NotificationDisplay maxItems={3} compact />
 
       {/* Quick Actions */}
       <Card title="Quick Actions">

@@ -4,6 +4,7 @@ import { ConfigProvider } from 'antd'
 import AuthProvider from '@/components/auth/AuthProvider'
 import { ShiftProvider } from '@/context/ShiftContext'
 import PWAInstaller from '@/components/shared/PWAInstaller'
+import '@ant-design/v5-patch-for-react-19'
 import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })

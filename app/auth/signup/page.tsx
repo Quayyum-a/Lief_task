@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { Card, Button, Input, Form, Space, Typography, Divider, message, Alert } from 'antd'
-import { GoogleOutlined, MailOutlined, UserOutlined, WarningOutlined } from '@ant-design/icons'
+import { GoogleOutlined, MailOutlined, UserOutlined, WarningOutlined, UserAddOutlined } from '@ant-design/icons'
 import { signIn, getProviders } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 
 const { Title, Text } = Typography
 
@@ -14,7 +15,7 @@ interface Provider {
   type: string
 }
 
-export default function SignInPage() {
+export default function SignUpPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
@@ -27,7 +28,7 @@ export default function SignInPage() {
 
   useEffect(() => {
     if (error) {
-      message.error('Sign in failed. Please try again.')
+      message.error('Sign up failed. Please try again.')
     }
     
     // Load available providers
@@ -38,18 +39,18 @@ export default function SignInPage() {
     })
   }, [error])
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignUp = async () => {
     setLoading(true)
     try {
       await signIn('google', { callbackUrl })
     } catch (error) {
-      message.error('Failed to sign in with Google')
+      message.error('Failed to sign up with Google')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleEmailSignIn = async (values: { email: string }) => {
+  const handleEmailSignUp = async (values: { email: string }) => {
     setEmailLoading(true)
     try {
       const result = await signIn('email', {
@@ -58,7 +59,7 @@ export default function SignInPage() {
       })
 
       if (result?.ok) {
-        message.success('Check your email for a sign-in link!')
+        message.success('Check your email for a sign-up link!')
         form.resetFields()
       } else {
         message.error('Failed to send email. Please try again.')
@@ -78,20 +79,20 @@ export default function SignInPage() {
       <Card className="w-full max-w-md shadow-lg">
         <div className="text-center mb-8">
           <div className="mb-4">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <UserOutlined className="text-2xl text-blue-600" />
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <UserAddOutlined className="text-2xl text-green-600" />
             </div>
           </div>
-          <Title level={2} className="mb-2">HealthShift</Title>
+          <Title level={2} className="mb-2">Join HealthShift</Title>
           <Text type="secondary" className="text-base">
-            Healthcare Worker Management System
+            Create your account to get started with healthcare shift management
           </Text>
         </div>
 
         {!hasGoogleProvider && !hasEmailProvider && (
           <Alert
             message="Authentication Setup Required"
-            description="Please configure Google OAuth or Email authentication in your environment variables to enable sign-in."
+            description="Please configure Google OAuth or Email authentication in your environment variables to enable sign-up."
             type="warning"
             icon={<WarningOutlined />}
             className="mb-6"
@@ -100,7 +101,7 @@ export default function SignInPage() {
         )}
 
         <Space direction="vertical" size="large" className="w-full">
-          {/* Google Sign In */}
+          {/* Google Sign Up */}
           {hasGoogleProvider && (
             <div>
               <Button
@@ -109,22 +110,22 @@ export default function SignInPage() {
                 size="large"
                 block
                 loading={loading}
-                onClick={handleGoogleSignIn}
+                onClick={handleGoogleSignUp}
                 className="h-12 flex items-center justify-center"
               >
-                Continue with Google
+                Sign up with Google
               </Button>
             </div>
           )}
 
           {hasGoogleProvider && hasEmailProvider && <Divider>or</Divider>}
 
-          {/* Email Sign In */}
+          {/* Email Sign Up */}
           {hasEmailProvider && (
             <div>
               <Form
                 form={form}
-                onFinish={handleEmailSignIn}
+                onFinish={handleEmailSignUp}
                 layout="vertical"
               >
                 <Form.Item
@@ -150,7 +151,7 @@ export default function SignInPage() {
                     loading={emailLoading}
                     className="h-12"
                   >
-                    Send Magic Link
+                    Send Sign-up Link
                   </Button>
                 </Form.Item>
               </Form>
@@ -173,7 +174,7 @@ export default function SignInPage() {
                 onClick={() => router.push('/worker')}
                 className="h-12"
               >
-                Continue as Demo Worker
+                Try as Demo Worker
               </Button>
               <Button
                 size="large"
@@ -181,7 +182,7 @@ export default function SignInPage() {
                 onClick={() => router.push('/manager')}
                 className="h-12 mt-2"
               >
-                Continue as Demo Manager
+                Try as Demo Manager
               </Button>
             </div>
           )}
@@ -190,20 +191,20 @@ export default function SignInPage() {
             <Text type="secondary" className="text-sm">
               {hasGoogleProvider || hasEmailProvider ? (
                 <>
-                  Sign in to access your healthcare shift management dashboard.
+                  Create your account to manage healthcare shifts effectively.
                   <br />
                   <br />
-                  <strong>Role Assignment:</strong>
+                  <strong>Account Types:</strong>
                   <br />
-                  • Emails containing &quot;manager&quot; → Manager access
+                  • Emails with &quot;manager&quot; → Manager account
                   <br />
-                  • All other emails → Worker access
+                  • All other emails → Worker account
                   <br />
                   <br />
-                  Don't have an account?{' '}
-                  <a href="/auth/signup" className="text-blue-600 hover:underline">
-                    Sign up here
-                  </a>
+                  Already have an account?{' '}
+                  <Link href="/auth/signin" className="text-blue-600 hover:underline">
+                    Sign in here
+                  </Link>
                 </>
               ) : (
                 <>
