@@ -164,6 +164,12 @@ export default function LoginForm() {
                   • Emails containing &quot;manager&quot; → Manager access
                   <br />
                   • All other emails → Worker access
+                  <br />
+                  <br />
+                  New to HealthShift?{' '}
+                  <Link href="/auth/signup" className="text-blue-600 hover:underline">
+                    Create account
+                  </Link>
                 </>
               )}
             </Text>
