@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Standard iOS app configuration -->
+	<key>CFBundleDisplayName</key>
+	<string>HealthShift</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.healthshift.app</string>
+	<key>CFBundleVersion</key>
+	<string>1.0.0</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	
+	<!-- Location Permission Keys for iOS -->
+	<!-- Required for requesting location while app is in use -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>HealthShift needs location access to verify you're within the designated work area before allowing clock in/out operations. Your location is used for attendance tracking and workplace safety compliance.</string>
+	
+	<!-- Required for background location access (if needed for geofencing) -->
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>HealthShift uses location services to monitor work area boundaries and provide location-based notifications for shift management. Location access ensures accurate attendance tracking and workplace compliance.</string>
+	
+	<!-- Additional location-related keys -->
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>HealthShift uses location services to monitor work area boundaries and provide location-based notifications for shift management, even when the app is in the background.</string>
+	
+	<!-- Privacy explanation for location access -->
+	<key>NSLocationUsageDescription</key>
+	<string>Location access is required for workplace attendance verification and shift tracking.</string>
+	
+	<!-- Camera access (if needed for future features) -->
+	<key>NSCameraUsageDescription</key>
+	<string>HealthShift may use camera access for profile photos or documentation features.</string>
+	
+	<!-- Notification permissions -->
+	<key>NSUserNotificationAlertStyle</key>
+	<string>alert</string>
+	
+	<!-- Background app refresh (for location monitoring) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>background-processing</string>
+		<string>remote-notification</string>
+	</array>
+	
+	<!-- Required device capabilities -->
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>location-services</string>
+		<string>gps</string>
+	</array>
+	
+	<!-- Supported interface orientations -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	
+	<!-- App Transport Security (for HTTPS requirements) -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<!-- Add your API domains here -->
+			<key>yourdomain.com</key>
+			<dict>
+				<key>NSExceptionRequiresForwardSecrecy</key>
+				<false/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.2</string>
+			</dict>
+		</dict>
+	</dict>
+</dict>
+</plist>
