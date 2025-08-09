@@ -1,0 +1,10 @@
+{
+  "user": {
+    "id": "test-manager-1", 
+    "email": "manager@hospital.com",
+    "name": "Test Manager",
+    "role": "manager",
+    "image": null
+  },
+  "expires": "2025-12-31T23:59:59.999Z"
+}

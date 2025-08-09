@@ -1,0 +1,10 @@
+{
+  "user": {
+    "id": "test-worker-1",
+    "email": "test@hospital.com",
+    "name": "Test Worker",
+    "role": "worker",
+    "image": null
+  },
+  "expires": "2025-12-31T23:59:59.999Z"
+}
