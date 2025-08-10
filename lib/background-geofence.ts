@@ -8,7 +8,7 @@ export interface RegionMonitoringEvent {
   timestamp: number
   location: LocationCoordinates
   perimeterId?: string
-  perimeter?: any
+  perimeter?: unknown 
 }
 
 export interface BackgroundFetchResult {
