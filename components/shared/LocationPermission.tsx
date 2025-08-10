@@ -35,7 +35,7 @@ export default function LocationPermission({
     isSupported,
     requestPermission,
     requestLocation
-  } = useLocation()
+  } = useLocation() as ReturnType<typeof useLocation> & { permissionState: 'granted' | 'denied' | 'prompt' | 'unknown' }
 
   const [hasRequestedPermission, setHasRequestedPermission] = useState(false)
 
