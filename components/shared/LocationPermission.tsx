@@ -50,9 +50,14 @@ export default function LocationPermission({
     setHasRequestedPermission(true);
     await requestPermission();
 
-    if (permissionState === "granted") {
+    // Get the latest permission state after requesting permission
+    const updatedPermissionState = (navigator.permissions
+      ? (await navigator.permissions.query({ name: "geolocation" })).state
+      : "unknown") as "granted" | "denied" | "prompt" | "unknown";
+
+    if (updatedPermissionState === "granted") {
       onPermissionGranted?.();
-    } else if (permissionState === "denied") {
+    } else if (updatedPermissionState === "denied") {
       onPermissionDenied?.();
     }
   };
